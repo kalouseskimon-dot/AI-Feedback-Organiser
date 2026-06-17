@@ -1,185 +1,60 @@
-# AI Customer Feedback Organiser
+# **AI Customer Feedback Organiser**
 
-Automatically capture, classify, and escalate customer feedback from multiple channels using AI‑powered analysis and beautifully formatted email alerts.
+An automated n8n workflow designed to ingest customer feedback from multiple channels, classify it using AI, filter noise, and deliver structured HTML alerts while logging all insights into Google Sheets.
 
-✨ Features
-📥 Multi‑source feedback intake (Gmail, Typeform, Webhooks)
+---
 
-🧹 Intelligent noise filtering
+## 🚀 **Architectural Overview**
+This pipeline operates through a multi‑stage processing model:
 
-🧠 AI‑powered categorization using Google Gemini
+1. **Ingestion**  
+   Collects feedback from **Gmail**, **Typeform**, and **custom Webhooks**, ensuring all customer touchpoints are captured.
 
-🏷️ Auto‑extracted metadata (email, content, urgency, sentiment)
+2. **Noise Filtering**  
+   A JavaScript filter removes irrelevant emails such as unsubscribe notices, receipts, and automated system messages, preserving only genuine feedback.
 
-🚨 Critical‑bug escalation logic
+3. **Field Extraction**  
+   Normalizes raw content, sender email, subject line, and timestamps across all input sources for consistent downstream processing.
 
-🎨 HTML‑formatted alert emails
+4. **LLM Classification**  
+   Uses **Google Gemini Flash models** via LangChain to determine:  
+   - Category (bug, feature_request, general)  
+   - Urgency (1–5)  
+   - Sentiment  
+   - 10‑word summary  
+   - Sender email  
 
-📊 Google Sheets logging
+5. **JSON Structuring**  
+   Regex‑based parsing converts the AI output into clean, structured JSON fields suitable for storage and rendering.
 
-⚡ Fully automated with n8n
+6. **HTML Rendering**  
+   A custom HTML generator produces branded, color‑coded alert emails with critical‑bug escalation logic and action buttons.
 
-🛡️ Error‑handling workflow with email notifications
+7. **Dispatch**  
+   Sends formatted alerts via **Gmail** and logs all entries into **Google Sheets** for long‑term tracking and analytics.
 
-🏗️ Workflow Architecture
-Gmail / Typeform / Webhook
-  ↓
-Noise Filtering
-  ↓
-Field Extraction
-  ↓
-AI Categorization Agent
-  ↓
-JSON Parsing
-  ↓
-HTML Beautifier
-  ↓
-Email Renderer
-  ↓
-Gmail Alert
-  ↓
-Google Sheets Logging
+8. **Error Handling**  
+   A dedicated error workflow triggers an email notification whenever execution fails, ensuring operational reliability.
 
-🚀 How It Works
-1. Multi‑Channel Feedback Intake
-The workflow listens for new feedback from:
+---
 
-Gmail messages
+## 🛠 **Prerequisites**
+- **n8n Instance** (self‑hosted or Cloud)  
+- **Google Gemini API Key** (for AI classification)  
+- **Gmail OAuth2 Credentials**  
+- **Google Sheets OAuth2 Credentials**  
+- Optional: **Webhook endpoint** or **Typeform form**
 
-Typeform submissions
+---
 
-Custom webhook events
+## 📥 **Installation**
+1. Import the workflow JSON into your n8n dashboard.  
+2. Configure your **Google Gemini(PaLM) Api** credentials in the AI Agent node.  
+3. Connect your **Gmail OAuth2** credentials for message retrieval and alert delivery.  
+4. Link your **Google Sheets** credentials for logging.  
+5. (Optional) Replace webhook paths or Typeform form IDs with your own.
 
-2. Noise Filtering
-Emails containing words like unsubscribe, invoice, receipt, or shipping are removed.
-Only messages containing feedback‑related terms (e.g., bug, feature, problem, idea) continue.
+---
 
-3. Field Extraction
-Depending on the source, the workflow extracts:
-
-Raw message content
-
-Sender email
-
-Subject line
-
-Timestamp
-
-4. AI Feedback Analysis
-A Google Gemini agent classifies each message into:
-
-Category (bug, feature_request, general)
-
-Urgency (1–5)
-
-Sentiment (Positive, Neutral, Negative)
-
-10‑word summary
-
-Sender email
-
-5. JSON Formatting
-Regex parsing converts the AI output into clean JSON fields.
-
-6. HTML Beautification
-The workflow generates a polished HTML email with:
-
-Dynamic color coding
-
-Critical‑bug alert banners
-
-Summary section
-
-Quick‑action button
-
-7. Automated Delivery
-The formatted alert is sent to your inbox via Gmail.
-
-8. Google Sheets Logging
-Each feedback entry is appended or updated in a Google Sheet for tracking and analytics.
-
-9. Error Workflow
-If anything fails, a separate workflow triggers an email notifying you of the issue.
-
-📚 Example Output
-Each alert email includes:
-
-Feedback Overview
-Category: BUG
-
-Urgency: 5
-
-Sentiment: Negative
-
-Email: user@example.com
-
-Summary
-A concise 10‑word description of the issue.
-
-Critical Alert Banner
-Displayed when:
-
-Category = bug
-
-Urgency ≥ 4
-
-Quick Action Button
-View & Resolve Immediately (for critical bugs)
-
-View in Database (for all others)
-
-🛠️ Technology Stack
-Technology	Purpose
-n8n	Workflow automation
-Google Gemini	AI classification
-Gmail	Email alerts
-Google Sheets	Feedback storage
-HTML/CSS	Email formatting
-
-
-🎯 Benefits
-For Support Teams
-Faster triage
-
-Automatic prioritization
-
-Clear summaries for quick action
-
-For Product Teams
-Structured feedback insights
-
-Easy tracking in Google Sheets
-
-For Founders
-Automated customer‑listening system
-
-Instant alerts for critical issues
-
-📈 Future Enhancements
-Auto‑reply to customers
-
-Slack / Teams notifications
-
-Multi‑language sentiment analysis
-
-Dashboard for analytics
-
-Duplicate‑feedback detection
-
-🔥 Production Architecture
-Gmail / Typeform / Webhook
- ↓
-Noise Filter
- ↓
-AI Categorizer
- ↓
-HTML Renderer
- ↓
-Gmail
- ↓
-Google Sheets
-
-📄 License
-MIT License
-
-Built with ❤️ using n8n, Google Gemini, Gmail, and automated HTML rendering.
+## ⚖️ **License**
+Distributed under the **MIT License**.
