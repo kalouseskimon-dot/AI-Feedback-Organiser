@@ -1,0 +1,72 @@
+{
+  "name": "AI Customer's Feedback Organiser (Error Workflow)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "509538f8-3c9c-46e7-bfec-de4ca6bd5f8e",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "your_email_address",
+        "subject": "Error on Feedback Organiser Workflow",
+        "message": "Check n8n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f2400547-a278-4665-b293-d9787c374da2",
+      "name": "Send a message",
+      "webhookId": "a6e53aec-5b02-4946-b62f-d1e3ec3582e6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TpgVPIMK1vnkhKjA",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "cec2be47-6910-40d4-be0c-ecac6fb1aa5f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3d94f51fcbb0e5522f7256e07d97964d5de2db71d67d2c262b0ca21dd0f2135e"
+  },
+  "id": "gPbKFQkQFIkRDXDQ",
+  "tags": [
+    {
+      "name": "error handling",
+      "id": "RJZrZZyzqiLPubc1",
+      "updatedAt": "2026-06-17T11:29:14.399Z",
+      "createdAt": "2026-06-17T11:29:14.399Z"
+    }
+  ]
+}
