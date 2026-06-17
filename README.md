@@ -1,4 +1,4 @@
-🎛️ # AI Customer Feedback Organiser
+# AI Customer Feedback Organiser
 
 Automatically capture, classify, and escalate customer feedback from multiple channels using AI‑powered analysis and beautifully formatted email alerts.
 
