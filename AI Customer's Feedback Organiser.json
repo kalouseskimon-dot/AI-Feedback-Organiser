@@ -1,0 +1,565 @@
+{
+  "name": "AI Customer's Feedback Organiser",
+  "nodes": [
+    {
+      "parameters": {
+        "formId": "tP9v5Blq"
+      },
+      "type": "n8n-nodes-base.typeformTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        208
+      ],
+      "id": "bd452e99-70f4-4352-976d-e1aee36db0c2",
+      "name": "Typeform Trigger",
+      "webhookId": "7f8f0079-15f0-430a-8a44-7887c4881fef",
+      "credentials": {
+        "typeformApi": {
+          "id": "xE8BO8UjswFIZA86",
+          "name": "Typeform account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "path": "f5717f48-ccde-4254-9cfa-ace795b31f11",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        96,
+        16
+      ],
+      "id": "d8afb119-9872-4ac6-b0b2-b112b568bdda",
+      "name": "Webhook",
+      "webhookId": "f5717f48-ccde-4254-9cfa-ace795b31f11"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e5e2b7c1-5147-4dfb-9cfd-d49988ad0c0e",
+              "name": "raw_content",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "54624261-c9e9-4ee6-91fe-fdf656b95229",
+              "name": "sender_email",
+              "value": "={{ $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "5e9c7294-03b6-42e3-a7d6-6524725958d5",
+              "name": "subject_line",
+              "value": "={{ $json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "dd4f4e2a-6d90-48f0-9373-bb2027019f5d",
+              "name": "source",
+              "value": "\"email\"",
+              "type": "string"
+            },
+            {
+              "id": "fb83bc3f-3973-47ef-b364-50f44875848c",
+              "name": "timestamp",
+              "value": "={{ $json.internalDate }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        -176
+      ],
+      "id": "2fce5458-eb59-4738-baad-71a54a144b21",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9f0ba44c-61d2-405a-8d15-fb32267923de",
+              "name": "raw_content",
+              "value": "={{ $json.answers[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "a8dccbec-ac7d-4a94-a865-cbef9a1e4db0",
+              "name": "sender_email",
+              "value": "={{ $json.answers[1].email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        208
+      ],
+      "id": "cc417dd9-5ae8-4f21-9eba-eab45b366c61",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7f1115b1-9088-480c-9f05-88d52122bc69",
+              "name": "raw_content",
+              "value": "={{ $json.body.message }}",
+              "type": "string"
+            },
+            {
+              "id": "a3785e8b-31bc-4f69-ac12-30083f00efe8",
+              "name": "sender_email",
+              "value": "={{ $json.body.user_email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        16
+      ],
+      "id": "45a131cc-35c1-46ec-8dd0-20c50b283613",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        0
+      ],
+      "id": "f22370ce-94e4-48de-b8f1-b5617b4d591a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.raw_content }} {{ $json.subject_line }} {{ $json.sender_email }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "You are a startup CX analyst. Read the feedback. Do not write anything other than the required information.\n\nFollow this format for your response:\nCategory: [bug, feature_request, or general]\nUrgency: [1 to 5]\nSummary: [A 10-word summary of the user's core point]\nSentiment: [Positive, Neutral, or Negative]\nSender_Email: [sender_email]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        768,
+        16
+      ],
+      "id": "338d4b85-34f7-4cd3-9969-a56893f57079",
+      "name": "AI Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "sendTo": "your_email",
+        "subject": "Customer Feedback ",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        16
+      ],
+      "id": "89594fec-0fd1-4f24-9b2c-0c97c14955a2",
+      "name": "Info Message",
+      "webhookId": "143ca398-6246-4366-b13b-4c1c643a0dec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TpgVPIMK1vnkhKjA",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\n// Define the logic: Bug + Urgency >= 4 is \"Critical\"\nconst isCritical = data.category.toLowerCase() === 'bug' && parseInt(data.urgency) >= 4;\n\nconst accentColor = isCritical ? \"#e74c3c\" : \"#3498db\";\nconst headerText = isCritical ? \"!!! CRITICAL BUG ALERT !!!\" : \"New Feedback Alert\";\n\nconst htmlBody = `\n<div style=\"font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px;\">\n    <h2 style=\"color: ${accentColor};\">${headerText}</h2>\n    <div style=\"background: #f4f4f9; padding: 15px; border-left: 5px solid ${accentColor};\">\n        <p><strong>Category:</strong> ${data.category.toUpperCase()}</p>\n        <p><strong>Urgency:</strong> ${data.urgency}/5</p>\n        <p><strong>Sentiment:</strong> ${data.sentiment}</p>\n        <p><strong>Email:</strong> ${data.email_address}</p>\n    </div>\n    <h3 style=\"color: #2c3e50;\">Summary</h3>\n    <p>${data.summary}</p>\n    <br>\n    <a href=\"http://localhost:5678/workflow/PAnBgczV5o605QSF\" style=\"background: ${accentColor}; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;\">\n        ${isCritical ? \"View & Resolve Immediately\" : \"View in Database\"}\n    </a>\n</div>\n`;\n\nreturn {\n    json: {\n        ...data,\n        email_address: data.email_address,   // ensure it exists in output\n        html_email: htmlBody,\n        is_critical: isCritical\n    }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        16
+      ],
+      "id": "beae45dc-c878-499a-84f3-1397a66df338",
+      "name": "HTML Beautifier"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The AI response is in the 'output' field\nconst text = items[0].json.output || \"\";\n\n// Regex helper that captures until the next label OR end of text\nconst getField = (label) => {\n    const regex = new RegExp(`${label}:\\\\s*([\\\\s\\\\S]*?)(?=\\\\n[A-Za-z_]+:|$)`, 'i');\n    const match = text.match(regex);\n    return match ? match[1].trim() : \"Not Found\";\n};\n\nreturn {\n    json: {\n        category: getField('Category'),\n        urgency: parseInt(getField('Urgency')) || 0,\n        summary: getField('Summary'),\n        sentiment: getField('Sentiment'),\n        email_address: getField('Sender_Email'),\n        raw_ai_response: text // Keep for debugging\n    }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        16
+      ],
+      "id": "a83fcce9-b4cc-453d-af60-5166217c50bd",
+      "name": "JSON formatter"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        768,
+        240
+      ],
+      "id": "8a97439a-a271-4b6a-a66f-6b12988e8dc8",
+      "name": "2.5 Flash",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "h3S0k9NLNpe4hxGh",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        912,
+        240
+      ],
+      "id": "d9389462-21fd-4c5b-aed4-3f046dc34eb9",
+      "name": "3.1 Flash Lite",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "h3S0k9NLNpe4hxGh",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define noise patterns\nconst noiseKeywords = ['unsubscribe', 'invoice', 'no-reply', 'receipt', 'order confirmation', 'shipping', 'welcome to'];\n\n// Define feedback indicators\nconst feedbackKeywords = ['feature', 'bug', 'problem', 'suggestion', 'idea', 'broken', 'improve', 'question', 'help'];\n\n// Filter all incoming items\nreturn items.filter(item => {\n  const snippet = (item.json.snippet || \"\").toString().toLowerCase();\n\n  const isNoise = noiseKeywords.some(word => snippet.includes(word));\n  const isFeedback = feedbackKeywords.some(word => snippet.includes(word));\n\n  // Keep only items that are NOT noise AND ARE feedback\n  return !isNoise && isFeedback;\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -176
+      ],
+      "id": "6246d2bd-82c1-4e31-8436-27f9c3c72596",
+      "name": "Noise Filtering"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\nconst emailBody = `\n<div style=\"font-family: sans-serif; line-height: 1.6; color: #333;\">\n  <h2 style=\"color: ${data.urgencyColor};\">${data.category}</h2>\n  <p><strong>Urgency:</strong> ${data.urgency}</p>\n  <p><strong>Sentiment:</strong> ${data.sentiment}</p>\n  <div style=\"border-left: 3px solid ${data.urgencyColor}; padding-left: 10px;\">\n    ${data.html_email || `<p>${data.raw_ai_response}</p>`}\n  </div>\n</div>\n`;\n\nreturn [{ json: { html: emailBody } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        16
+      ],
+      "id": "c94d0038-a1ea-48b2-b8e6-64b1a4758c5f",
+      "name": "Email Converter"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -352,
+        -176
+      ],
+      "id": "9b38eb5b-d07b-4173-b8b0-008186438936",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 4,
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        -176
+      ],
+      "id": "1ba482bf-8cde-47b0-a322-0a34572935ad",
+      "name": "Get many messages",
+      "webhookId": "2eabe019-8820-41bc-b158-7fc17e8388fd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TpgVPIMK1vnkhKjA",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1408,
+        256
+      ],
+      "id": "5f9fc083-e178-44b7-aef9-60fabbfb8486",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Vswv5AxO3523jVRd",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Typeform Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "JSON formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML Beautifier": {
+      "main": [
+        [
+          {
+            "node": "Email Converter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON formatter": {
+      "main": [
+        [
+          {
+            "node": "HTML Beautifier",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2.5 Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3.1 Flash Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Noise Filtering": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Converter": {
+      "main": [
+        [
+          {
+            "node": "Info Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Noise Filtering",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Info Message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "629a9844-ff88-4835-9279-ab6c99c25c1c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3d94f51fcbb0e5522f7256e07d97964d5de2db71d67d2c262b0ca21dd0f2135e"
+  },
+  "id": "PAnBgczV5o605QSF",
+  "tags": [
+    {
+      "updatedAt": "2026-06-15T14:16:52.005Z",
+      "createdAt": "2026-06-15T14:16:52.005Z",
+      "id": "fwsx6GpgC2t7bVBu",
+      "name": "feedback categorization"
+    },
+    {
+      "updatedAt": "2026-06-15T14:16:31.544Z",
+      "createdAt": "2026-06-15T14:16:31.544Z",
+      "id": "wkKu4jwIx1GRl9oY",
+      "name": "customer support"
+    }
+  ]
+}
