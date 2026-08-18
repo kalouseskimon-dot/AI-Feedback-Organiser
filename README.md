@@ -1,6 +1,6 @@
-# **AI Customer Feedback Organiser**
+# **AI Customer's Feedback Organiser**
 
-An automated n8n workflow designed to ingest customer feedback from multiple channels, classify it using AI, filter noise, and deliver structured HTML alerts while logging all insights into Google Sheets.
+An automated n8n workflow designed to ingest customer feedback, analyze and classify it using Google Gemini AI models, render formatted alert emails, log records into Supabase, and automatically generate draft response emails via Gmail.
 
 ---
 
@@ -8,51 +8,55 @@ An automated n8n workflow designed to ingest customer feedback from multiple cha
 This pipeline operates through a multi‑stage processing model:
 
 1. **Ingestion**  
-   Collects feedback from **Gmail**, **Typeform**, and **custom Webhooks**, ensuring all customer touchpoints are captured.
+   Triggers when a response is submitted via **Typeform** (`Typeform Trigger`).
 
-2. **Noise Filtering**  
-   A JavaScript filter removes irrelevant emails such as unsubscribe notices, receipts, and automated system messages, preserving only genuine feedback.
+2. **Field Extraction & Normalization**  
+   Extracts key data fields (e.g., `raw_content`, `sender_email`) from the Typeform payload and passes them downstream through a passthrough node (`Edit Fields1` -> `No Operation`).
 
-3. **Field Extraction**  
-   Normalizes raw content, sender email, subject line, and timestamps across all input sources for consistent downstream processing.
+3. **LLM Classification**  
+   Processes the feedback using an **n8n AI Agent** backed by **Google Gemini** language models (`2.5 Flash Lite` / `3.1 Flash Lite`). The agent categorizes feedback and extracts structured metrics based on system instructions:
+   - **Category**: `bug`, `feature_request`, or `general`
+   - **Urgency**: `1` to `5`
+   - **Summary**: 10-word core point summary
+   - **Sentiment**: `Positive`, `Neutral`, or `Negative`
 
-4. **LLM Classification**  
-   Uses **Google Gemini Flash models** via LangChain to determine:  
-   - Category (bug, feature_request, general)  
-   - Urgency (1–5)  
-   - Sentiment  
-   - 10‑word summary  
-   - Sender email  
+4. **JSON Structuring**  
+   Parses raw text outputs from the primary AI agent using regular expressions (`JSON formatter`) to output uniform JavaScript objects containing clean values for category, urgency rating, summary, and sentiment.
 
-5. **JSON Structuring**  
-   Regex‑based parsing converts the AI output into clean, structured JSON fields suitable for storage and rendering.
+5. **HTML Formatting & Dispatch**  
+   - **HTML Beautifier**: Evaluates the severity of the feedback. Critical bugs (Category: `bug` with Urgency $\ge$ `4`) trigger special high-priority styling (red accent color, critical alert headers).
+   - **Email Converter**: Converts the alert payload into a clean HTML layout.
+   - **Info Message**: Sends the formatted alert email directly to the designated support inbox using **Gmail**.
 
-6. **HTML Rendering**  
-   A custom HTML generator produces branded, color‑coded alert emails with critical‑bug escalation logic and action buttons.
-
-7. **Dispatch**  
-   Sends formatted alerts via **Gmail** and logs all entries into **Google Sheets** for long‑term tracking and analytics.
-
-8. **Error Handling**  
-   A dedicated error workflow triggers an email notification whenever execution fails, ensuring operational reliability.
+6. **Database Logging & Draft Generation**  
+   - **Supabase Integration**: Inserts the parsed feedback entry directly into the `feedbacks` table (`Create a row`).
+   - **AI Auto-Response Generation**: Passes context to a second **AI Agent** (`AI Agent1`) powered by **Google Gemini Chat Models** to draft a contextual response email.
+   - **Gmail Draft Creation**: Creates a pending message draft in Gmail (`Create a draft`) thanking the customer.
+   - **Database Update**: Updates the existing record in **Supabase** (`Update a row`) to signal completed workflow execution.
 
 ---
 
 ## 🛠 **Prerequisites**
-- **n8n Instance** (self‑hosted or Cloud)  
-- **Google Gemini API Key** (for AI classification)  
-- **Gmail OAuth2 Credentials**  
-- **Google Sheets OAuth2 Credentials**  
-- Optional: **Webhook endpoint** or **Typeform form**
+- **n8n Instance** (Self‑hosted or Cloud)
+- **Google Gemini API Key** (`Google Gemini(PaLM) Api`)
+- **Typeform Account & API Key**
+- **Gmail OAuth2 Credentials**
+- **Supabase Account & Credentials**
 
 ---
 
 ## 📥 **Installation**
-1. Import the workflow JSON into your n8n dashboard.  
-2. Configure your **Google Gemini(PaLM) Api** credentials in the AI Agent node.  
-3. Connect your **Gmail OAuth2** credentials for message retrieval and alert delivery.  
-4. Link your **Google Sheets** credentials for logging.  
-5. (Optional) Replace webhook paths or Typeform form IDs with your own.
+1. **Import Workflow**: Import the `AI Customer's Feedback Organiser` JSON file into your n8n workspace.
+2. **Setup Credentials**:
+   - Link your **Typeform API** account in the `Typeform Trigger` node.
+   - Set up **Google Gemini (PaLM) API** credentials for the Gemini chat model nodes.
+   - Authenticate **Gmail OAuth2** credentials for sending alerts (`Info Message`) and drafting replies (`Create a draft`).
+   - Configure **Supabase API** credentials for database operations (`Create a row`, `Update a row`).
+3. **Configure Nodes**:
+   - Set your specific `formId` inside the `Typeform Trigger` node.
+   - Update the recipient email address inside the `Info Message` Gmail node.
+   - Update the target Supabase table name or schema in the Supabase nodes if necessary.
+4. **Activate**: Toggle the workflow switch to **Active**.
 
 ---
 
