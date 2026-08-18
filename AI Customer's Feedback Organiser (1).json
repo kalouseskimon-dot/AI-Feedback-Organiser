@@ -1,0 +1,511 @@
+{
+  "name": "AI Customer's Feedback Organiser",
+  "nodes": [
+    {
+      "parameters": {
+        "formId": "tP9v5Blq"
+      },
+      "type": "n8n-nodes-base.typeformTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        48
+      ],
+      "id": "d07360b2-8eb2-4631-808a-874145f40a67",
+      "name": "Typeform Trigger",
+      "webhookId": "7f8f0079-15f0-430a-8a44-7887c4881fef",
+      "credentials": {
+        "typeformApi": {
+          "id": "xjQU9C2HkndY5OMg",
+          "name": "Typeform account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9f0ba44c-61d2-405a-8d15-fb32267923de",
+              "name": "raw_content",
+              "value": "={{ $json.answers[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "a8dccbec-ac7d-4a94-a865-cbef9a1e4db0",
+              "name": "sender_email",
+              "value": "={{ $json.answers[1].email }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        48
+      ],
+      "id": "f0e0818b-6ef5-4a47-a338-7755eaeb24fa",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.raw_content }} {{ $json.subject_line }} {{ $json.sender_email }}",
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "You are a startup CX analyst. Read the feedback. Do not write anything other than the required information. Ignore any passwords, API keys, personal identifiers or sensitive information. Do not repeat or summarize them.\n\nFollow this format for your response:\nCategory: [bug, feature_request, or general]\nUrgency: [1 to 5]\nSummary: [A 10-word summary of the user's core point]\nSentiment: [Positive, Neutral, or Negative]"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1344,
+        48
+      ],
+      "id": "c77791dd-d919-4148-926d-23ca4615e67a",
+      "name": "AI Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "sendTo": "kalouseskimon@gmail.com",
+        "subject": "Customer Feedback ",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2496,
+        -96
+      ],
+      "id": "987aa3ec-a054-423c-aa44-2db4715a6034",
+      "name": "Info Message",
+      "webhookId": "143ca398-6246-4366-b13b-4c1c643a0dec",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "K9UXy9HHQqJiX3ff",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\n// Define the logic: Bug + Urgency >= 4 is \"Critical\"\nconst isCritical = data.category.toLowerCase() === 'bug' && parseInt(data.urgency) >= 4;\n\nconst accentColor = isCritical ? \"#e74c3c\" : \"#3498db\";\nconst headerText = isCritical ? \"!!! CRITICAL BUG ALERT !!!\" : \"New Feedback Alert\";\n\nconst htmlBody = `\n<div style=\"font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px;\">\n    <h2 style=\"color: ${accentColor};\">${headerText}</h2>\n    <div style=\"background: #f4f4f9; padding: 15px; border-left: 5px solid ${accentColor};\">\n        <p><strong>Category:</strong> ${data.category.toUpperCase()}</p>\n        <p><strong>Urgency:</strong> ${data.urgency}/5</p>\n        <p><strong>Sentiment:</strong> ${data.sentiment}</p>\n        <p><strong>Email:</strong> ${data.email_address}</p>\n    </div>\n    <h3 style=\"color: #2c3e50;\">Summary</h3>\n    <p>${data.summary}</p>\n    <br>\n    <a href=\"http://localhost:5678/workflow/PAnBgczV5o605QSF\" style=\"background: ${accentColor}; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;\">\n        ${isCritical ? \"View & Resolve Immediately\" : \"View in Database\"}\n    </a>\n</div>\n`;\n\nreturn {\n    json: {\n        ...data,\n        email_address: data.email_address,   // ensure it exists in output\n        html_email: htmlBody,\n        is_critical: isCritical\n    }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -96
+      ],
+      "id": "d7696940-1d24-4f82-8703-3e894d191df3",
+      "name": "HTML Beautifier"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Grab the current item being processed in the loop\nconst inputData = $input.item.json;\n\n// Extract the raw text from the AI agent's evaluation string\nconst text = inputData.output || \"\";\n\n// Regex helper that captures until the next label OR end of text\nconst getField = (label) => {\n    const regex = new RegExp(`${label}:\\\\s*([\\\\s\\\\S]*?)(?=\\\\n[A-Za-z_]+:|$)`, 'i');\n    const match = text.match(regex);\n    return match ? match[1].trim() : \"Not Found\";\n};\n\nreturn {\n    category: getField('Category'),\n    urgency: parseInt(getField('Urgency')) || 0,\n    summary: getField('Summary'),\n    sentiment: getField('Sentiment'),\n    raw_ai_response: text // Keep for debugging\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        48
+      ],
+      "id": "fe5eb9b3-624c-4e42-8695-9f1588443938",
+      "name": "JSON formatter"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        288
+      ],
+      "id": "bf5225a7-67e8-4d13-9612-0d976f33d28c",
+      "name": "3.1 Flash Lite",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SlKorLLmajzTYhAY",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = items[0].json;\n\nconst emailBody = `\n<div style=\"font-family: sans-serif; line-height: 1.6; color: #333;\">\n  <h2 style=\"color: ${data.urgencyColor};\">${data.category}</h2>\n  <p><strong>Urgency:</strong> ${data.urgency}</p>\n  <p><strong>Sentiment:</strong> ${data.sentiment}</p>\n  <div style=\"border-left: 3px solid ${data.urgencyColor}; padding-left: 10px;\">\n    ${data.html_email || `<p>${data.raw_ai_response}</p>`}\n  </div>\n</div>\n`;\n\nreturn [{ json: { html: emailBody } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        -96
+      ],
+      "id": "cf3c553a-b80f-460b-8678-37d54c012959",
+      "name": "Email Converter"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        48
+      ],
+      "id": "2226fc84-513d-4ecd-807d-71b5353ff9a8",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        288
+      ],
+      "id": "f73e24a6-8c37-440a-99a6-b13aff70688f",
+      "name": "2.5 Flash Lite",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SlKorLLmajzTYhAY",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "EMAIL CHANGE"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1280,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "55d682b0-616f-44c6-8ad5-ace60b0b2f53",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "tableId": "feedbacks",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Category"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        208
+      ],
+      "id": "22a27d3d-2793-4b82-89ce-a42d5ea16e77",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1DUXjw5GC3ZiE4an",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "needsFallback": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2144,
+        208
+      ],
+      "id": "401fffa8-c08e-4b5c-ba96-8e6c10a4704c",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        432
+      ],
+      "id": "e46fa660-2ec0-456e-86ab-8ca18d82d802",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SlKorLLmajzTYhAY",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        432
+      ],
+      "id": "f8c3c0df-2457-4408-9182-b9656bda46b2",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SlKorLLmajzTYhAY",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "Thanks for your feedback to [company name]!",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2496,
+        208
+      ],
+      "id": "0b68398b-0f2f-470d-8d77-51231aa91b03",
+      "name": "Create a draft",
+      "webhookId": "17001c0e-edf3-4954-af78-6ff2b7de46a7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "K9UXy9HHQqJiX3ff",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "feedbacks"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2720,
+        208
+      ],
+      "id": "7f40bd6c-1a09-47cb-82f2-c1dd87b43b94",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "1DUXjw5GC3ZiE4an",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Typeform Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "JSON formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML Beautifier": {
+      "main": [
+        [
+          {
+            "node": "Email Converter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON formatter": {
+      "main": [
+        [
+          {
+            "node": "HTML Beautifier",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3.1 Flash Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Email Converter": {
+      "main": [
+        [
+          {
+            "node": "Info Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2.5 Flash Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a draft": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "6c1485cd-30ac-437b-81e3-2548cd3e1b71",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ad02b850b72b806c34d3f1401b6f233a142112a47a1a3338f6ba3a1a764e7713"
+  },
+  "nodeGroups": [],
+  "id": "AHGNfnAinQ19CJzy",
+  "tags": [
+    {
+      "updatedAt": "2026-06-18T16:11:21.632Z",
+      "createdAt": "2026-06-18T16:11:21.632Z",
+      "id": "2HbhhB1Hf5Dj1z4G",
+      "name": "customer support"
+    },
+    {
+      "updatedAt": "2026-06-18T16:11:21.639Z",
+      "createdAt": "2026-06-18T16:11:21.639Z",
+      "id": "UHNnMRvi5rtC4477",
+      "name": "feedback categorization"
+    }
+  ]
+}
